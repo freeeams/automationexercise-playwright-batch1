@@ -14,6 +14,8 @@ test.describe('shopping cart test cases', async () => {
     test('verifuy shopping cart', async ({ page }) => {
         await homePage.verifyHomePage();
         await homePage.clickOnTopNavigationLink('Cart');
+        await basePage.enterEmail('asd')
+        await basePage.clickOnCheckoutButton();
         await basePage.verifyTitle('You have been successfully subscribed!');
     })
 
