@@ -2,12 +2,10 @@
 
 import { test } from "@playwright/test";
 import { HomePage } from "../../pages/HomePage";
-import { BasePage} from "../../pages/productdetailsPage";
+import { BasePage} from "../../pages/basePage";
 import { base } from "@faker-js/faker/.";
 test.describe('product details test cases', async () => {
     let homePage: HomePage
-    let productsPage: ProductsPage;
-    let productDetails: ProductDetailsPage;
     let basePage: BasePage;
     test.beforeEach(async ({ page }) => {
         homePage = new HomePage(page);
