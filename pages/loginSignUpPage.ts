@@ -8,6 +8,13 @@ export class LoginSignUpPage extends BasePage {
   private passwordField: Locator;
   private loginButton1: Locator;
   private expectedLoginTitleText: Locator;
+  private loggedInAs: Locator;
+  private deleteAccountButton: Locator;
+  private deleteAccountMessage: Locator;
+  private newUserSignUpTitle: Locator;
+  private newUserLoginField: Locator;
+  private newUserPasswordField: Locator
+  private expectedNewUserSignUpTitle: Locator;
   constructor(page: Page) {
     super(page);
     this.signUpLoginButton = page.locator('a[href="/login"]');
@@ -16,6 +23,14 @@ export class LoginSignUpPage extends BasePage {
     this.passwordField = page.locator('input[data-qa="login-password"]');
     this.loginButton1 = page.locator('button[data-qa="login-button"]');
     this.expectedLoginTitleText = page.getByText('Your email or password is');
+    this.loggedInAs = page.locator('i[class="fa fa-user"]');
+    this.deleteAccountButton = page.locator('a[href="/delete_account"]');
+    this.deleteAccountMessage = page.locator('h2[class="title text-center"]');
+    this.newUserSignUpTitle = page.getByRole('heading', { name: 'New User Signup!' })
+    this.newUserLoginField = page.locator('input[data-qa="signup-email"]');
+    this.newUserPasswordField = page.getByRole('textbox', { name: 'Name' })
+    this.expectedNewUserSignUpTitle = page.getByText('Email Address already exist!')
+
   }
   async clickOnSignUpLoginButton(): Promise<void> {
     await this.signUpLoginButton.click();
@@ -36,5 +51,29 @@ export class LoginSignUpPage extends BasePage {
     this.expectedLoginTitleText = this.page.getByText(expectedLoginTitleText);
     expect(this.expectedLoginTitleText).toBeVisible();
     expect(this.expectedLoginTitleText).toHaveText(expectedLoginTitleText);
+  }async verifySuccessfulLoginMessage(loggedInAsText: string): Promise<void> {
+    this.loggedInAs = this.page.getByText(loggedInAsText);
+    expect(this.loggedInAs).toBeVisible();
+    expect(this.loggedInAs).toHaveText(loggedInAsText);
+  } async clickOnDeleteAccountButton(): Promise<void> {
+    await this.deleteAccountButton.click();
+  }async verifyAccountDeletedMessage(expectedDeleteAccountMessage: string): Promise<void> {
+    this.deleteAccountMessage = this.page.getByText(expectedDeleteAccountMessage);
+    expect(this.deleteAccountMessage).toBeVisible();
+    expect(this.deleteAccountMessage).toHaveText(expectedDeleteAccountMessage);
+  }
+  async verifyNewUserSignUpTitle(expectedNewUserSignUpTitle: string): Promise<void> {
+    this.newUserSignUpTitle = this.page.getByText(expectedNewUserSignUpTitle);
+    expect(this.newUserSignUpTitle).toBeVisible();
+    expect(this.newUserSignUpTitle).toHaveText(expectedNewUserSignUpTitle);
+  }
+  async enterNewUserCredentials(email: string, password: string): Promise<void> {
+    await this.newUserPasswordField.fill(password);
+    await this.newUserLoginField.fill(email);
+
+  }async clickOnNewUserSignUpButton(): Promise<void> {
+    await this.loginButton1.click();
+  }async verifyExistingEmailMessage(): Promise<void> {
+   await this.expectedNewUserSignUpTitle.isVisible();
   }
 }

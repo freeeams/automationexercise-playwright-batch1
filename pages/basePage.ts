@@ -11,10 +11,10 @@ export class BasePage {
     private topNavigationLinks: Locator;
     private womenDressTitleMessage: Locator;
     private tshirtsCategory: Locator;
-    private productButtons: Locator;    
+    private productButtons: Locator;
     private signUpLoginButton: Locator;
     private loginTitle: Locator;
-    private loginField : Locator;
+    private loginField: Locator;
     private passwordField: Locator;
     private loginButton1: Locator;
     private expectedLoginTitleText: Locator;
@@ -38,20 +38,15 @@ export class BasePage {
         this.loginButton1 = page.locator('button[data-qa="login-button"]');
         this.expectedLoginTitleText = page.getByText('Your email or password is');
     }
-
     async clickOnTopNavigationLink(linkText: string): Promise<void> {
         await this.topNavigationLinks.getByText(linkText).click();
     }
-
     async clickOnProduct(productName: string): Promise<void> {
         await this.page.click(`[data-product-name="${productName}"]`);
     }
-
     async scrollDownToFooter(): Promise<void> {
         await this.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-
     }
-
     async enterEmail(email: string): Promise<void> {
         await this.emailField.fill(email);
     }
@@ -61,20 +56,16 @@ export class BasePage {
     async verifyTitle(expectedTitle: string): Promise<void> {
         expect(this.actualTitle).toHaveText(expectedTitle);
     }
-
     async verifyProductsPageTitle(expectedProductTitle: string): Promise<void> {
         expect(this.productTitle).toHaveText(expectedProductTitle);
     }
     async clickVerifyCategoryWomen(): Promise<void> {
         await this.categoryWomen.click();
         await this.dressCategory.click();
-
     }
-
     async verifyWomenDressTitleMessage(message: string): Promise<void> {
         expect(this.womenDressTitleMessage).toHaveText(message);
     }
-
     async clickVerifyCategoryMen(): Promise<void> {
         await this.categoryMen.click();
         await this.tshirtsCategory.click();
@@ -96,7 +87,7 @@ export class BasePage {
     }
     async clickOnLoginButton(): Promise<void> {
         await this.loginButton1.click();
-    } 
+    }
     async verifyUnsuccessfulLoginMessage(expectedLoginTitleText: string): Promise<void> {
         this.expectedLoginTitleText = this.page.getByText(expectedLoginTitleText);
         expect(this.expectedLoginTitleText).toBeVisible();
