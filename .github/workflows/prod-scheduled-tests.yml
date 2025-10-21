@@ -1,0 +1,136 @@
+name: Production Environment - Scheduled Tests
+
+on:
+  schedule:
+    # Run every day at 10:00 AM UTC (adjust timezone as needed)
+    - cron: '0 10 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+env:
+  NODE_VERSION: '18'
+  ENVIRONMENT: 'prod'
+
+jobs:
+  smoke-tests:
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run Smoke & Critical tests only
+      run: npx playwright test tests/acceptanse-smoke-critical/ --project=${{ matrix.browser }}
+      env:
+        CI: true
+        TEST_ENV: prod
+        # Production should use headless mode and minimal retries
+        HEADLESS: true
+
+    - name: Upload smoke test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-smoke-report-prod-${{ matrix.browser }}
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 60
+
+    - name: Upload HTML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-html-smoke-report-prod-${{ matrix.browser }}
+        path: playwright-report/
+        retention-days: 60
+
+  health-check:
+    needs: smoke-tests
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run Production Health Check
+      run: npx playwright test tests/acceptanse-smoke-critical/e2e.spec.ts --project=chromium --grep="@health"
+      env:
+        CI: true
+        TEST_ENV: prod
+        HEADLESS: true
+      continue-on-error: true
+
+    - name: Upload health check results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: health-check-prod
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 90
+
+  alert-on-failure:
+    needs: [smoke-tests, health-check]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+    - name: Create failure alert
+      run: |
+        echo "## ⚠️ PRODUCTION TEST FAILURE ALERT" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered**: Scheduled run" >> $GITHUB_STEP_SUMMARY
+        echo "- **Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Smoke Tests Status**: ${{ needs.smoke-tests.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Health Check Status**: ${{ needs.health-check.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Action Required**: Please investigate production issues immediately!" >> $GITHUB_STEP_SUMMARY
+
+  notify-success:
+    needs: [smoke-tests, health-check]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - name: Create success summary
+      run: |
+        echo "## ✅ Production Environment Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered**: Scheduled run" >> $GITHUB_STEP_SUMMARY
+        echo "- **Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Smoke Tests Status**: ${{ needs.smoke-tests.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Health Check Status**: ${{ needs.health-check.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status**: All production tests passed successfully! 🚀" >> $GITHUB_STEP_SUMMARY

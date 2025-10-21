@@ -1,0 +1,122 @@
+name: QA Environment - Scheduled Tests
+
+on:
+  schedule:
+    # Run every day at 6:00 AM UTC (adjust timezone as needed)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+env:
+  NODE_VERSION: '18'
+  ENVIRONMENT: 'qa'
+
+jobs:
+  test:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        test-suite: [acceptance-smoke-critical, regression]
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run Acceptance & Smoke Critical tests
+      if: matrix.test-suite == 'acceptance-smoke-critical'
+      run: npx playwright test tests/acceptanse-smoke-critical/ --project=${{ matrix.browser }}
+      env:
+        CI: true
+        TEST_ENV: qa
+
+    - name: Run Regression tests
+      if: matrix.test-suite == 'regression'
+      run: npx playwright test tests/regression/ --project=${{ matrix.browser }}
+      env:
+        CI: true
+        TEST_ENV: qa
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-qa-${{ matrix.browser }}-${{ matrix.test-suite }}
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 30
+
+    - name: Upload HTML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-html-report-qa-${{ matrix.browser }}-${{ matrix.test-suite }}
+        path: playwright-report/
+        retention-days: 30
+
+  test-coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run full test suite for coverage
+      run: npx playwright test --project=chromium
+      env:
+        CI: true
+        TEST_ENV: qa
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-coverage-qa
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 30
+
+  notify:
+    needs: [test, test-coverage]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Create test summary
+      run: |
+        echo "## 🧪 QA Environment Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: QA" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered**: Scheduled run" >> $GITHUB_STEP_SUMMARY
+        echo "- **Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Status**: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Coverage Status**: ${{ needs.test-coverage.result }}" >> $GITHUB_STEP_SUMMARY
