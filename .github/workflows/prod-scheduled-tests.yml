@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # Allows manual triggering
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: 'lts/*'
   ENVIRONMENT: 'prod'
 
 jobs:

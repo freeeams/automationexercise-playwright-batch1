@@ -28,7 +28,7 @@
   "homepage": "https://github.com/freeeams/automationexercise-playwright-batch1#readme",
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.56.1",
     "@types/node": "^24.5.2",
     "typescript": "^5.9.2"
   },
