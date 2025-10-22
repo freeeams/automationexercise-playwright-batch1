@@ -1,0 +1,75 @@
+name: Dev Environment - Scheduled Tests
+
+on:
+  schedule:
+    # Run every day at 2:00 AM UTC (adjust timezone as needed)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+env:
+  NODE_VERSION: 'lts/*'
+  ENVIRONMENT: 'dev'
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run Playwright tests
+      run: npx playwright test
+      env:
+        CI: true
+        TEST_ENV: dev
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-dev-${{ matrix.browser }}
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 30
+
+    - name: Upload HTML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-html-report-dev-${{ matrix.browser }}
+        path: playwright-report/
+        retention-days: 30
+
+  notify:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Create test summary
+      run: |
+        echo "## 🧪 Dev Environment Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Dev" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered**: Scheduled run" >> $GITHUB_STEP_SUMMARY
+        echo "- **Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
